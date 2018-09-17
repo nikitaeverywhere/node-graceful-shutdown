@@ -207,7 +207,7 @@ async function test () {
     for (const [info, t] of tests) {
         process.stdout.write(`- ${ info }`);
         await t();
-        console.log("\r✔");
+        console.log(" ✔");
     }
 }
 
