@@ -181,6 +181,23 @@ const tests = [
             assert.ok(true);
         }
 
+    }],
+    ["Shuts down only once", async () => {
+
+        const pkg = await testModule();
+        const callTable = { "a": 0 };
+
+        pkg.onShutdown("a", async function () {
+            callTable["a"]++;
+        });
+        
+        process.emit("SIGINT");
+        process.emit("SIGINT");
+        process.emit("SIGTERM");
+        await delay();
+
+        assert.equal(callTable["a"], 1);
+
     }]
 ];
 

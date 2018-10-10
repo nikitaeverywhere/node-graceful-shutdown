@@ -4,6 +4,8 @@ const dependencyTree = new Map(); // name => [dependency name, ...]
 const handlers = new Map(); // name => [handler, ...]
 const shutdownErrorHandlers = [];
 
+let shuttingDown = false;
+
 /**
  * Gracefully terminate application's modules on shutdown.
  * @param {string} [name] - Name of the handler.
@@ -37,13 +39,17 @@ async function gracefullyHandleShutdown () {
     exit(0);
 }
 
-handledEvents.forEach(event => process.removeAllListeners(event).addListener(event, () =>
+handledEvents.forEach(event => process.removeAllListeners(event).addListener(event, () => {
+    if (shuttingDown) {
+        return;
+    }
+    shuttingDown = true;
     gracefullyHandleShutdown().catch((e) => {
         Promise.all(shutdownErrorHandlers.map(f => f(e)))
             .then(() => exit(42759))
             .catch(() => exit(42758));
-    })
-));
+    });
+}));
 
 // -------- Utility functions -------- \\
 
