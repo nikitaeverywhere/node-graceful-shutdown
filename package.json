@@ -1,6 +1,6 @@
 {
   "name": "node-graceful-shutdown",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Gracefully shutdown your modular NodeJS application",
   "main": "index.js",
   "engines": {
