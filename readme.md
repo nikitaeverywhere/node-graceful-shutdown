@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/zitros/node-graceful-shutdown.svg)](LICENSE)
 [![Build Status](https://travis-ci.org/ZitRos/node-graceful-shutdown.svg?branch=master)](https://travis-ci.org/ZitRos/node-graceful-shutdown)
 
-Gracefully handle your modular NodeJS application's shutdown (termination).
+Gracefully handle your modular NodeJS application's shutdown (termination), using dependencies.
 
 Example
 -------
@@ -30,21 +30,26 @@ onShutdown("database", ["http-server", "message-bus"], async function () {
     // Shut down your database here, ONLY AFTER http-server and message-bus are completed.
 });
 
-// After all handlers are processed without errors, process exits with code 0. Otherwise it exits with code 42759.
+// After all handlers are processed without errors, process exits with code 0.
+// Otherwise it exits with exit code 42759, or exit code 42758 if there are any errors in assigned shutdown handlers.
+
+// If some of specified dependencies are not defined (like when "http-server" is missing in the above example),
+// node-graceful-shutdown will run the current handler without waiting for the undefined dependency.
 ```
 
 Features and Guidelines
 -----------------------
 
 This library, along existing ones, allow your application to be **modular**. You define a cleanup callback in-place,
-in the same module, where initialization happens.
+in the same module, where initialization happens. In addition, it allows specifying the order 
 
 Recommendations:
-1. Please do not use this module in libraries (modules, packages). Use for the end application only.
-2. Once imported, `onShutdown` is application-wide, so the callbacks and their dependencies will see each other when required from the same `node_modules` folder.
-3. Circular dependencies will throw an error immediately once declared.
-4. There's also an `onShutdownError` export which takes an error inside handlers handler (added for very-very prudent programmers only).
+1. Please, do not use this module in libraries (modules, packages). Use for the end application only.
+2. Once imported, `onShutdown` is application-wide (in terms of a single process), so the callbacks and their dependencies will see each other when imported from multiple files.
+3. Circular shutdown handler dependencies will throw an error immediately once declared.
+4. There's also an `onShutdownError` export which takes an error as an argument when any of assigned shutdown handlers throw an error (added for very-very prudent programmers only).
 5. Importing this module deletes existing handlers (`SIGINT`, `SIGTERM`, `SIGQUIT`) if there are any (normally, there should be no other handlers).
+6. You may also consider defining constants
 
 Licence
 -------

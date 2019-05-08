@@ -56,7 +56,7 @@ handledEvents.forEach(event => process.removeAllListeners(event).addListener(eve
 function checkDependencyLoop (node, visited = new Set()) {
     if (visited.has(node)) {
         throw new Error(
-            `node-graceful-shutdown, dependency loop: ${ Array.from(visited).join("->") }->${ node }. Check your code.`
+            `node-graceful-shutdown, circular dependency defined: ${ Array.from(visited).join("->") }->${ node }. Check your code.`
         );
     }
     visited.add(node);
