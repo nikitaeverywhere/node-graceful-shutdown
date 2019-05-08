@@ -4,4 +4,4 @@ export function onShutdown(
     handler?: () => Promise<void>
 ): void;
 
-export function onShutdownError(callback: () => Promise<void>): void;
+export function onShutdownError(callback: (error: Error) => Promise<void>): void;
