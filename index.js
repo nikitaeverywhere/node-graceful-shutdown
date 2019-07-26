@@ -83,8 +83,7 @@ function getDependencyTreeLeaves () {
 
 function getAllDependents (name) {
     return new Set(Array.from(dependencyTree.entries())
-        .filter(([_, dependencies]) => dependencies.indexOf(name) !== -1)
-        .filter(([parent]) => handlers.has(parent))
+        .filter(([parent, dependencies]) => ~dependencies.indexOf(name) && handlers.has(parent))
         .map(([parent]) => parent));
 }
 
