@@ -198,6 +198,27 @@ const tests = [
 
         assert.equal(callTable["a"], 1);
 
+    }],
+    // Keep this test at the end.
+    ["Removes other shutdown handlers", async () => {
+
+        process.addListener('SIGINT', () => {
+            console.log('\n\nSIGINT is handled by the custom code, but is expected to be handled by the library.\n');
+            process.exit(101);
+        });
+
+        const pkg = await testModule();
+        const callTable = { "a": 0 };
+
+        pkg.onShutdown("a", async function () {
+            callTable["a"] = 1;
+        });
+        
+        process.emit("SIGINT");
+        await delay();
+
+        assert.equal(callTable["a"], 1);
+
     }]
 ];
 
@@ -229,7 +250,7 @@ async function test () {
 }
 
 test().then(() => {
-    console.log("It works indeed!");
+    console.log("\nIt works indeed!");
 }).catch((e) => {
     console.log("\n\nTEST FAILED");
     console.error(e);

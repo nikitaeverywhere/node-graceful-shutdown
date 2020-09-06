@@ -6,6 +6,8 @@
 
 Gracefully handle your modular NodeJS application's shutdown (termination), using dependencies.
 
+Process signals captured: `SIGINT`, `SIGTERM`, `SIGQUIT`.
+
 Example
 -------
 
@@ -44,12 +46,12 @@ This library, along existing ones, allow your application to be **modular**. You
 in the same module, where initialization happens. In addition, it allows specifying the order 
 
 Recommendations:
-1. Please, do not use this module in libraries (modules, packages). Use for the end application only.
+1. Please, **do not use this module in libraries** (modules, packages). It is intended for end applications only (see why in `5.`).
 2. Once imported, `onShutdown` is application-wide (in terms of a single process), so the callbacks and their dependencies will see each other when imported from multiple files.
 3. Circular shutdown handler dependencies will throw an error immediately once declared.
 4. There's also an `onShutdownError` export which takes an error as an argument when any of assigned shutdown handlers throw an error (added for very-very prudent programmers only).
-5. Importing this module deletes existing handlers (`SIGINT`, `SIGTERM`, `SIGQUIT`) if there are any (normally, there should be no other handlers).
-6. You may also consider defining constants
+5. Importing this module **deletes** existing handlers (`SIGINT`, `SIGTERM`, `SIGQUIT`) if there are any. This is intended as other custom handlers can exit the process at any time.
+6. You may also consider defining constants in your application, instead of string arguments (names).
 
 Licence
 -------

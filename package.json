@@ -1,6 +1,6 @@
 {
   "name": "node-graceful-shutdown",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Gracefully shutdown your modular NodeJS application",
   "main": "index.js",
   "engines": {
@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/ZitRos/node-graceful-shutdown#readme",
   "devDependencies": {
-    "esm": "^3.0.83",
-    "ava": "^0.25.0"
+    "ava": "^3.12.1",
+    "esm": "^3.2.25"
   }
 }
