@@ -12,8 +12,8 @@ const tests = [
         process.emit("SIGINT");
         await delay();
     
-        assert.equal(callTable[0], true);
-        assert.equal(pkg.exitCode, 0);
+        assert.strictEqual(callTable[0], true);
+        assert.strictEqual(pkg.exitCode, 0);
 
     }],
     ["Handles dependent shutdown actions", async () => {
@@ -29,14 +29,14 @@ const tests = [
             callTable["b"] = true;
         });
     
-        assert.equal(pkg.exitCode, -1);
+        assert.strictEqual(pkg.exitCode, -1);
 
         process.emit("SIGINT");
         await delay();
 
-        assert.equal(callTable["a"], true);
-        assert.equal(callTable["b"], true);
-        assert.equal(pkg.exitCode, 0);
+        assert.strictEqual(callTable["a"], true);
+        assert.strictEqual(callTable["b"], true);
+        assert.strictEqual(pkg.exitCode, 0);
 
     }],
     ["Handles triangle dependencies", async () => {
@@ -62,10 +62,42 @@ const tests = [
         process.emit("SIGINT");
         await delay(500);
 
-        assert.equal(callTable["a"], true);
-        assert.equal(callTable["b"], true);
-        assert.equal(callTable["c"], true);
-        assert.equal(pkg.exitCode, 0);
+        assert.strictEqual(callTable["a"], true);
+        assert.strictEqual(callTable["b"], true);
+        assert.strictEqual(callTable["c"], true);
+        assert.strictEqual(pkg.exitCode, 0);
+
+    }],
+    ["Handles example case", async () => {
+
+        const pkg = await testModule();
+        const callTable = {};
+
+        pkg.onShutdown("database", ["http-server", "message-bus"], async function () {
+            if (!callTable["message-bus"]) assert.fail("Must call database after message-bus");
+            if (!callTable["http-server"]) assert.fail("Must call database after http-server");
+            await delay(100);
+            callTable["database"] = true;
+        });
+        pkg.onShutdown("message-bus", ["http-server"], async function () {
+            if (!callTable["http-server"]) assert.fail("Must call http-server before message-bus");
+            if (callTable["database"]) assert.fail("Must call database after message-bus");
+            await delay(200);
+            callTable["message-bus"] = true;
+        });
+        pkg.onShutdown("http-server", async function () {
+            if (callTable["message-bus"]) assert.fail("Must call message-bus after http-server");
+            if (callTable["database"]) assert.fail("Must call database after http-server");
+            callTable["http-server"] = true;
+        });
+
+        process.emit("SIGINT");
+        await delay(500);
+
+        assert.strictEqual(pkg.exitCode, 0);
+        assert.strictEqual(callTable["database"], true, "database");
+        assert.strictEqual(callTable["http-server"], true, "http-server");
+        assert.strictEqual(callTable["message-bus"], true, "message-bus");
 
     }],
     ["Handles nonexistent dependency", async () => {
@@ -80,10 +112,10 @@ const tests = [
         process.emit("SIGINT");
         await delay();
     
-        assert.equal(callTable["d"], true);
-        assert.equal(callTable["a"], true);
-        assert.equal(callTable["c"], true);
-        assert.equal(pkg.exitCode, 0);
+        assert.strictEqual(callTable["d"], true);
+        assert.strictEqual(callTable["a"], true);
+        assert.strictEqual(callTable["c"], true);
+        assert.strictEqual(pkg.exitCode, 0);
 
     }],
     ["Handles duplicated callback", async () => {
@@ -103,10 +135,10 @@ const tests = [
         process.emit("SIGINT");
         await delay();
     
-        assert.equal(callTable["a1"], true);
-        assert.equal(callTable["a2"], true);
-        assert.equal(callTable["b"], true);
-        assert.equal(pkg.exitCode, 0);
+        assert.strictEqual(callTable["a1"], true);
+        assert.strictEqual(callTable["a2"], true);
+        assert.strictEqual(callTable["b"], true);
+        assert.strictEqual(pkg.exitCode, 0);
 
     }],
     ["Handles complex callbacks with missed dependencies", async () => {
@@ -134,10 +166,10 @@ const tests = [
 
         process.emit("SIGTERM");
         await delay(200);
-        assert.equal(!!callTable["a"], false);
+        assert.strictEqual(!!callTable["a"], false);
         await delay(200);
 
-        ["a", "b", "c", "e"].forEach(letter => assert.equal(callTable[letter], true, `Letter ${ letter }`));
+        ["a", "b", "c", "e"].forEach(letter => assert.strictEqual(callTable[letter], true, `Letter ${ letter }`));
 
     }],
     ["Handles errors as exit code 42759", async () => {
@@ -156,9 +188,9 @@ const tests = [
         process.emit("SIGINT");
         await delay();
 
-        assert.equal(callTable["b"], true);
-        assert.equal(callTable["e"], true);
-        assert.equal(pkg.exitCode, 42759);
+        assert.strictEqual(callTable["b"], true);
+        assert.strictEqual(callTable["e"], true);
+        assert.strictEqual(pkg.exitCode, 42759);
 
     }],
     ["Detects circular dependencies", async () => {
@@ -196,7 +228,7 @@ const tests = [
         process.emit("SIGTERM");
         await delay();
 
-        assert.equal(callTable["a"], 1);
+        assert.strictEqual(callTable["a"], 1);
 
     }],
     // Keep this test at the end.
@@ -217,7 +249,7 @@ const tests = [
         process.emit("SIGINT");
         await delay();
 
-        assert.equal(callTable["a"], 1);
+        assert.strictEqual(callTable["a"], 1);
 
     }]
 ];
@@ -243,7 +275,7 @@ async function testModule () {
 
 async function test () {
     for (const [info, t] of tests) {
-        process.stdout.write(`- ${ info }`);
+        process.stdout.write(`- ${ info }\n`);
         await t();
         console.log(" ✔");
     }
