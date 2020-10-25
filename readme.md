@@ -39,6 +39,29 @@ onShutdown("database", ["http-server", "message-bus"], async function () {
 // node-graceful-shutdown will run the current handler without waiting for the undefined dependency.
 ```
 
+Or, if you have all your modules as exports and they all shutdown one after another,
+this will work at its best in your application's `main.js`:
+
+```javascript
+import { onShutdown } from "node-graceful-shutdown";
+import { startModule1, startModule2, stopModule1, stopModule2 /*, ...*/ } from "./src";
+
+export const startMyApp = async () => {
+    await startModule1();
+    await startModule2();
+};
+
+export const stopMyApp = async () => {
+    // Stop modules one after another.
+    await stopModule1();
+    await stopModule2();
+    // ...
+};
+
+// Handle application's shutdown.
+onShutdown(stopMyApp);
+```
+
 Features and Guidelines
 -----------------------
 
@@ -46,7 +69,7 @@ This library, along existing ones, allow your application to be **modular**. You
 in the same module, where initialization happens. In addition, it allows specifying the order 
 
 Recommendations:
-1. Please, **do not use this module in libraries** (modules, packages). It is intended for end applications only (see why in `5.`).
+1. Please, **do not use this module in libraries** (packages). It is intended for end applications only (see why in `5.`).
 2. Once imported, `onShutdown` is application-wide (in terms of a single process), so the callbacks and their dependencies will see each other when imported from multiple files.
 3. Circular shutdown handler dependencies will throw an error immediately once declared.
 4. There's also an `onShutdownError` export which takes an error as an argument when any of assigned shutdown handlers throw an error (added for very-very prudent programmers only).
@@ -56,4 +79,4 @@ Recommendations:
 Licence
 -------
 
-[MIT](LICENSE) © [Nikita Savchenko](https://nikita.tk)
+[MIT](LICENSE) © [Nikita Savchenko](https://nikita.tk/developer)

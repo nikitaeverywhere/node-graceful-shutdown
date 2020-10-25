@@ -4,8 +4,6 @@ const dependencyTree = new Map(); // name => [dependency name, ...]
 const handlers = new Map(); // name => [handler, ...]
 const shutdownErrorHandlers = [];
 
-let shuttingDown = false;
-
 /**
  * Gracefully terminate application's modules on shutdown.
  * @param {string} [name] - Name of the handler.
@@ -13,100 +11,112 @@ let shuttingDown = false;
  * @param {function} handler - Async or sync function which handles shutdown.
  */
 module.exports.onShutdown = function (name, dependencies, handler) {
-    handler = typeof name === "function" ? name : typeof dependencies === "function" ? dependencies : handler;
-    dependencies = name instanceof Array ? name : dependencies instanceof Array ? dependencies : [];
-    name = typeof name === "string" ? name : "default";
-    dependencies.forEach(dependency => addDependency(name, dependency));
-    if (!handlers.has(name)) {
-        handlers.set(name, []);
-    }
-    handlers.get(name).push(handler);
+  handler =
+    typeof name === "function"
+      ? name
+      : typeof dependencies === "function"
+      ? dependencies
+      : handler;
+  dependencies =
+    name instanceof Array
+      ? name
+      : dependencies instanceof Array
+      ? dependencies
+      : [];
+  name = typeof name === "string" ? name : Math.random().toString(36);
+
+  if (dependencies.reduce((acc, dep) => acc || testForCycles(dep), false)) {
+    throw new Error(
+      `Adding shutdown handler "${name}" will create a dependency loop: aborting`
+    );
+  }
+
+  dependencyTree.set(
+    name,
+    Array.from(new Set((dependencyTree.get(name) || []).concat(dependencies)))
+  );
+  if (!handlers.has(name)) {
+    handlers.set(name, []);
+  }
+  handlers.get(name).push(handler);
 };
 
 /**
  * Optional export to handle shutdown errors.
- * @param {function} callback 
+ * @param {function} callback
  */
 module.exports.onShutdownError = function (callback) {
-    shutdownErrorHandlers.push(callback);
+  shutdownErrorHandlers.push(callback);
 };
 
-async function gracefullyHandleShutdown () {
-    const leveledHandlers = getLeveledHandlers();
-    for (const handlers of leveledHandlers) {
-        await Promise.all(handlers.map(handler => handler()));
+async function shutdown(name, promisesMap) {
+  if (promisesMap.has(name)) {
+    return await promisesMap.get(name);
+  }
+
+  const nodeCompletedPromise = (async function () {
+    const dependencies = dependencyTree.get(name) || [];
+
+    // Wait for all dependencies to shut down.
+    await Promise.all(dependencies.map((dep) => shutdown(dep, promisesMap)));
+
+    // Shutdown this item.
+    const allHandlers = handlers.get(name) || [];
+    if (allHandlers.length) {
+      await Promise.all(allHandlers.map((f) => f()));
     }
-    exit(0);
+  })();
+
+  promisesMap.set(name, nodeCompletedPromise);
+  await nodeCompletedPromise;
 }
 
-handledEvents.forEach(event => process.removeAllListeners(event).addListener(event, () => {
+let shuttingDown = false;
+handledEvents.forEach((event) =>
+  process.removeAllListeners(event).addListener(event, () => {
     if (shuttingDown) {
-        return;
+      return;
     }
     shuttingDown = true;
-    gracefullyHandleShutdown().catch((e) => {
-        Promise.all(shutdownErrorHandlers.map(f => f(e)))
-            .then(() => exit(42759))
-            .catch(() => exit(42758));
-    });
-}));
+
+    // Get all unreferenced nodes.
+    const unreferencedNames = getAllUnreferencedNames();
+
+    const visited = new Map();
+    Promise.all(unreferencedNames.map((name) => shutdown(name, visited)))
+      .then(() => exit(0))
+      .catch((e) => {
+        Promise.all(shutdownErrorHandlers.map((f) => f(e)))
+          .then(() => exit(42759))
+          .catch(() => exit(42758));
+      });
+  })
+);
 
 // -------- Utility functions -------- \\
 
-function checkDependencyLoop (node, visited = new Set()) {
-    if (visited.has(node)) {
-        throw new Error(
-            `node-graceful-shutdown, circular dependency defined: ${ Array.from(visited).join("->") }->${ node }. Check your code.`
-        );
-    }
-    visited.add(node);
-    const dependencies = dependencyTree.get(node) || [];
-    for (const dependency of dependencies) {
-        checkDependencyLoop(dependency, visited);
-    }
+function testForCycles(name, visitedSet = new Set()) {
+  // Return true if the cycle is found.
+  if (visitedSet.has(name)) {
+    return true;
+  }
+  visitedSet.add(name);
+  // If any of the cycles found in dependencies, return true.
+  return (dependencyTree.get(name) || []).reduce(
+    (acc, name) => acc || testForCycles(name),
+    false
+  );
 }
 
-function addDependency (child, parent) {
-    if (!dependencyTree.has(child)) {
-        dependencyTree.set(child, []);
-    }
-    dependencyTree.get(child).push(parent);
-    checkDependencyLoop(child);
+function getAllUnreferencedNames() {
+  const allNodes = new Set(Array.from(dependencyTree.keys()));
+  Array.from(dependencyTree.values()).forEach((deps) =>
+    deps.forEach((dep) => allNodes.delete(dep))
+  );
+  return Array.from(allNodes);
 }
 
-function getDependencyTreeLeaves () {
-    return Array.from(handlers.keys()).filter((name) => // Leave only those hander names
-        !dependencyTree.has(name) // Which have no dependencies
-        || dependencyTree.get(name).reduce((r, dep) => r && !handlers.has(dep), true) // And all their deps w/o handlers
-    );
+/* STUBBED - DO NOT EDIT */
+function exit(code) {
+  process.exit(code);
 }
-
-function getAllDependents (name) {
-    return new Set(Array.from(dependencyTree.entries())
-        .filter(([_, dependencies]) => dependencies.indexOf(name) !== -1)
-        .filter(([parent]) => handlers.has(parent))
-        .map(([parent]) => parent));
-}
-
-function getLeveledHandlers () {
-    const levels = [getDependencyTreeLeaves()];
-    while (levels[levels.length - 1].length > 0) {
-        const dependents = new Set();
-        for (const task of levels[levels.length - 1]) {
-            for (const dependent of getAllDependents(task)) {
-                dependents.add(dependent);
-            }
-        }
-        levels.push(Array.from(dependents));
-    }
-    return levels.map(tasks => tasks.reduce((arr, task) => {
-        for (const handler of handlers.get(task)) {
-            arr.push(handler);
-        }
-        return arr;
-    }, []));
-}
-
-/* STUBBED */ function exit (code) {
-/* STUBBED */     process.exit(code);
-/* STUBBED */ }
