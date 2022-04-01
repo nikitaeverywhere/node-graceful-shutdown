@@ -71,19 +71,32 @@ async function shutdown(name, promisesMap) {
   await nodeCompletedPromise;
 }
 
-let shuttingDown = false;
+let shuttingDown = null;
+
+/**
+ * Perform the shutdown logic without exiting the process
+ * This is useful in testing scenarios.
+ *
+ * @example
+ * ```js
+ * afterAll(()=> performShutdown())
+ * ```
+ */
+module.exports.performShutdown = ()=> {
+  if (shuttingDown) return shuttingDown;
+
+  // Get all unreferenced nodes.
+  const unreferencedNames = getAllUnreferencedNames();
+
+  const visited = new Map();
+    
+
+  return (shuttingDown = Promise.all(unreferencedNames.map((name) => shutdown(name, visited))))
+}
+
 handledEvents.forEach((event) =>
   process.removeAllListeners(event).addListener(event, () => {
-    if (shuttingDown) {
-      return;
-    }
-    shuttingDown = true;
-
-    // Get all unreferenced nodes.
-    const unreferencedNames = getAllUnreferencedNames();
-
-    const visited = new Map();
-    Promise.all(unreferencedNames.map((name) => shutdown(name, visited)))
+    performShutdown()
       .then(() => exit(0))
       .catch((e) => {
         Promise.all(shutdownErrorHandlers.map((f) => f(e)))
