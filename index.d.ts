@@ -1,11 +1,9 @@
-interface OnShutdown {
-  (handler: ()=> Promise<void>): void
-  (name: string, handler: ()=> Promise<void>): void
-  (name: string, dependencies: string[], handler: ()=> Promise<void>): void
-}
-
-export const onShutdown: OnShutdown
-
-export function performShutdown(): Promise<void> 
+export function onShutdown(
+    name: (() => Promise<void>) | string | string[],
+    dependencies?: (() => Promise<void>) | string[],
+    handler?: () => Promise<void>
+): void;
 
 export function onShutdownError(callback: (error: Error) => Promise<void>): void;
+
+export function performShutdown(): Promise<void>
