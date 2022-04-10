@@ -1,0 +1,24 @@
+name: Node.js package
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '16.x'
+    - run: npm install
+    - run: npm test
+    - uses: JS-DevTools/npm-publish@v1
+      with:
+        token: ${{ env.NPM_TOKEN }}
