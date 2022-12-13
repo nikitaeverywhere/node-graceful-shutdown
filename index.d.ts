@@ -1,4 +1,4 @@
-type Handler<returnType = void> = () => Promise<returnType> | returnType;
+type Handler<returnType = unknown> = () => Promise<returnType> | returnType;
 
 interface OnShutdown {
   (handler: Handler): void;
