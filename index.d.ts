@@ -1,9 +1,9 @@
 type Handler<returnType = void> = () => Promise<returnType> | returnType;
 
 interface OnShutdown {
-  Handler
-  (name: string, Handler): void
-  (name: string, dependencies: string[], Handler): void
+  (handler: Handler): void;
+  (name: string, handler: Handler): void;
+  (name: string, dependencies: string[], handler: Handler): void;
 }
 
 export const onShutdown: OnShutdown;
