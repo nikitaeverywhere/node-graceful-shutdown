@@ -18,8 +18,8 @@
     "url": "git+https://github.com/ZitRos/node-graceful-shutdown.git"
   },
   "author": {
-    "name": "ZitRo",
-    "url": "https://nikita.tk"
+    "name": "Nikita Savchenko",
+    "url": "https://nikitaeverywhere.com"
   },
   "keywords": [
     "graceful",

@@ -82,4 +82,4 @@ Recommendations:
 
 ## Licence
 
-[MIT](LICENSE) © [Nikita Savchenko](https://nikita.tk/developer)
+[MIT](LICENSE) © [Nikita Savchenko](https://nikitaeverywhere.com/tech/)
